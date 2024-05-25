@@ -1,0 +1,60 @@
+from selenium import webdriver
+from selenium.webdriver.safari.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.safari.options import Options
+import json
+
+class PlayerDataScraper:
+    def __init__(self, url):
+        self.url = url
+        self.data = []
+
+    def scrape_data(self):
+        try:
+            # Create a new instance of the Safari driver
+            safari_service = Service('/usr/bin/safaridriver')  # Path to Safari WebDriver
+            driver = webdriver.Safari(service=safari_service)
+
+            # Navigate to the URL
+            driver.get(self.url)
+
+            # Parse the HTML content
+            stats_elements = driver.find_elements(By.CLASS_NAME, 'summaryStatBreakdown')
+
+            if not stats_elements:
+                print(f"No stats found on the page.")
+                driver.quit()
+                return None
+
+            # Extract stats from the elements
+            for stat_element in stats_elements:
+                sub_header = stat_element.find_element(By.CLASS_NAME, 'summaryStatBreakdownSubHeader').text
+                value = stat_element.find_element(By.CLASS_NAME, 'summaryStatBreakdownDataValue').text
+                description = stat_element.find_element(By.CLASS_NAME, 'summaryStatBreakdownDescription').text
+                self.data.append({"sub_header": sub_header, "value": value, "description": description})
+
+            driver.quit()
+            return self.data
+
+        except Exception as e:
+            print(f"Failed to retrieve the page: {e}")
+            return None
+
+def write_to_file(data, filename):
+    with open(filename, 'w') as file:
+        json.dump(data, file, indent=4)
+
+# Example usage
+url = "https://www.hltv.org/stats/players/20778/somnium"
+output_file = "player_stats.txt"
+
+player_scraper = PlayerDataScraper(url)
+data = player_scraper.scrape_data()
+
+if data:
+    for row in data:
+        print(row)
+
+    # Write data to file
+    write_to_file(data, output_file)
+    print(f"Data written to {output_file}")
